@@ -1,0 +1,198 @@
+command /setframe [<number>]:
+	trigger:
+		set {frame::setting} to arg-1
+		send "&aRight click on the frame block to set it!" to event-player
+
+command /resetframes:
+	trigger:
+		clear {frame::loc::*}
+		clear {dragon::loc}
+		send "&aAll the frames are resseted" to event-player
+
+command /dragonloc:
+	trigger:
+		set {dragon::loc} to location of event-player
+		send "&aDragon spawning location setted to %location of event-player%" to event-player
+
+on rightclick:
+	if event-block is ender portal frame:
+		set {_times} to 1
+		set {_contains} to 0
+		loop 8 times:
+			if {frame::loc::%{_times}%} is location of event-block:
+				set {_contains} to 1
+			set {_times} to {_times} + 1
+		if {_contains} is 1:
+			if name of event-player's tool is "&5Summoning Eye":
+				if {placed::amount} is not set:
+					set {placed::amount} to 0
+				if {placed::amount} < 8:
+					set {_times} to 1
+					set {_contains} to 0
+					loop 8 times:
+						if {placed::loc::%{_times}%} is location of event-block:
+							set {_contains} to 1
+						set {_times} to {_times} + 1
+					if {_contains} is 1:
+						send "&cThere is already eye placed here" to event-player
+					else:
+						#set block at location of event-block to end portal frame[eye=true]
+						#set block data tag "eye" of event-block to true
+						set {_location} to location of event-block
+						set {_x} to {_location}'s x-coord
+						set {_y} to {_location}'s y-coord
+						set {_z} to {_location}'s z-coord
+						#make console execute "setblock %{_x}% %{_y}% %{_z}% minecraft:end_portal_frame 4"
+						set event-block's data to 4
+						#make player execute "setblock %{_x}% %{_y}% %{_z}% minecraft:end_portal_frame 4"
+						set {placed::amount} to {placed::amount} + 1
+						set {placed::loc::%{placed::amount}%} to location of event-block
+						set {placed::%event-player%::%{placed::amount}%} to location of event-block
+						set {placed::%event-player%::amount} to {placed::%event-player%::amount} + 1
+						send "%event-player% &5Placed Summoning Eye &8(&e%{placed::amount}%&b/&e8&8)" to all players in world "EndermanPlace"
+						remove head named "&5Summoning Eye" from event-player's inventory
+				else:
+					send "&cAready spawned dragon!" to event-player
+			else:
+				cancel event
+		else:
+			if {frame::setting} > 0:
+				set {frame::loc::%{frame::setting}%} to location of event-block
+				send "&aFrame location [%{frame::setting}%] set to %{frame::loc::%{frame::setting}%}% (%event-block%)!" to event-player
+				set {frame::setting} to 0
+
+on place:
+	if name of event-player's tool is "&5Summoning Eye":
+		cancel event
+	if name of event-player's tool is "&5Sleeping Eye":
+		cancel event
+
+every 1 tick:
+	if {dragon::spawned} is not set:
+		set {dragon::spawned} to 0
+	if {placed::amount} is 8:
+		if {dragon::spawned} is 0:
+			set {dragon::spawned} to 1
+			spawn a ender dragon at {dragon::loc}
+			set name of last spawned entity to "&5Shadow Dragon"
+			set max health of last spawned entity to 2000000
+			set the maximum health of last spawned entity to 2000000
+			heal the last spawned entity
+#on damage:
+	#if victim is ender dragon:
+		#set {dragon::damage::%attacker%} to {dragon::damage::%attacker%} + damage
+
+command /eyereset:
+	trigger:
+		loop all players:
+			set {_times} to 1
+			loop 8 times:
+				set block at {frame::loc::%{_times}%} to ender portal frame
+				set {_times} to {_times} + 1
+			set {placed::amount} to 0
+			clear {placed::loc::*}
+			set {dragon::spawned} to 0
+			set {placed::%loop-player%::amount} to 0
+			clear {placed::%loop-player%::%{placed::amount}%}
+
+on death of enderdragon:
+	set {placed::amount} to 0
+	clear {placed::loc::*}
+	set {dragon::spawned} to 0
+	set {_times2} to 1
+	loop 8 times:
+		set block at {frame::loc::%{_times2}%} to end portal frame
+		set {_times2} to {_times2} + 1
+	set {_times} to 1
+	loop all players in world "EndermanPlace":
+		set {_n} to number of all players in world "EndermanPlace"
+		if {_n} < 2:
+			set {dragon::highDamage} to {dragon::damage::%loop-player%}
+			set {dragon::highPlayer} to loop-player
+		else:
+			set {d::%{_times}%} to {dragon::damage::%loop-player%}
+			if {_times} > 1:
+				set {_before} to {_times} - 1
+				if {dragon::damage::%loop-player%} is bigger than {d::%{_before}%}:
+					set {dragon::highDamage} to {dragon::damage::%loop-player%}
+					set {dragon::highPlayer} to loop-player
+		if {dragon::highPlayer} is loop-player:
+			set {points::%loop-player%} to 100 * {placed::%loop-player%::amount} + 200
+		else:
+			set {points::%loop-player%} to 100 * {placed::%loop-player%::amount}
+		set {placed::%loop-player%::amount} to 0
+		clear {placed::%loop-player%::%{placed::amount}%}
+		if {points::%loop-player%} >= 500:
+			chance of 100%:
+				set {_skull} to skull from skin with value "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjg0NDQyMjRhZjJjZDRhNWQzOTA5ZGI3NzJjN2QwYzk1YjEyMTZjM2FjMDE5ZjRhMGU3Y2RiYjhmMDdmNDE4ZiJ9fX0=" signature ""
+				give {_skull} named "&dUltra Enchanted Pearl" to loop-player
+			chance of 20%:
+				give nether brick named "&cShadow Power" to attacker
+			chance of 20%:
+				give iron horse armor named "&fShadow Horse" to attacker
+			chance of 20%:
+				give stone button named "&8Base Shadow Atom" to attacker
+			chance of 20%:
+				give firework star named "&8Shadow Bomb" to attacker
+			chance of 20%:
+				give 409 named "&bShadow Shard" to attacker
+			chance of 5%:
+				give nether brick named "&cShadow Power" to attacker
+				give iron horse armor named "&fShadow Horse" to attacker
+				give stone button named "&8Base Shadow Atom" to attacker
+				give firework star named "&8Shadow Bomb" to attacker
+				give 409 named "&bShadow Shard" to attacker
+		else if {points::%loop-player%} >= 400:
+			chance of 15%:
+				set {_skull} to skull from skin with value "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjg0NDQyMjRhZjJjZDRhNWQzOTA5ZGI3NzJjN2QwYzk1YjEyMTZjM2FjMDE5ZjRhMGU3Y2RiYjhmMDdmNDE4ZiJ9fX0=" signature ""
+				give {_skull} named "&dUltra Enchanted Pearl" to loop-player
+			chance of 10%:
+				give nether brick named "&cShadow Power" to attacker
+			chance of 10%:
+				give iron horse armor named "&fShadow Horse" to attacker
+			chance of 10%:
+				give stone button named "&8Base Shadow Atom" to attacker
+			chance of 10%:
+				give firework star named "&8Shadow Bomb" to attacker
+			chance of 10%:
+				give 409 named "&bShadow Shard" to attacker
+			chance of 2%:
+				give nether brick named "&cShadow Power" to attacker
+				give iron horse armor named "&fShadow Horse" to attacker
+				give stone button named "&8Base Shadow Atom" to attacker
+				give firework star named "&8Shadow Bomb" to attacker
+				give 409 named "&bShadow Shard" to attacker
+		else if {points::%loop-player%} <= 400:
+			if {points::%loop-player%} > 200:
+				chance of 5%:
+					set {_skull} to skull from skin with value "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjg0NDQyMjRhZjJjZDRhNWQzOTA5ZGI3NzJjN2QwYzk1YjEyMTZjM2FjMDE5ZjRhMGU3Y2RiYjhmMDdmNDE4ZiJ9fX0=" signature ""
+					give {_skull} named "&dUltra Enchanted Pearl" to loop-player
+				chance of 1%:
+					give nether brick named "&cShadow Power" to attacker
+				chance of 0.5%:
+					give iron horse armor named "&fShadow Horse" to attacker
+				chance of 0.5%:
+					give stone button named "&8Base Shadow Atom" to attacker
+				chance of 0.5%:
+					give firework star named "&8Shadow Bomb" to attacker
+				chance of 0.5%:
+					give 409 named "&bShadow Shard" to attacker
+				chance of 0.3%:
+					give nether brick named "&cShadow Power" to attacker
+					give iron horse armor named "&fShadow Horse" to attacker
+					give stone button named "&8Base Shadow Atom" to attacker
+					give firework star named "&8Shadow Bomb" to attacker
+					give 409 named "&bShadow Shard" to attacker
+			else if {points::%loop-player%} > 1:
+				chance of 0.05%:
+					set {_skull} to skull from skin with value "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYjg0NDQyMjRhZjJjZDRhNWQzOTA5ZGI3NzJjN2QwYzk1YjEyMTZjM2FjMDE5ZjRhMGU3Y2RiYjhmMDdmNDE4ZiJ9fX0=" signature ""
+					give {_skull} named "&dUltra Enchanted Pearl" to loop-player
+		set {_times} to {_times} + 1
+	send "&e----------------------" to all players in world "EndermanPlace"
+	send "&5%name of victim% killed!" to all players in world "EndermanPlace"
+	send "" to all players in world "EndermanPlace"
+	send "&6&l1s Place: %{dragon::highPlayer}% &ewith &6%{dragon::highDamage}% &edamage" to all players in world "EndermanPlace"
+	send "" to all players in world "EndermanPlace"
+	send "&e----------------------" to all players in world "EndermanPlace"
+	set {placed::%attacker%::amount} to 0
+	clear {placed::%attacker%::*}
